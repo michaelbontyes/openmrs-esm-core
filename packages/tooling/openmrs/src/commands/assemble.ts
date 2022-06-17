@@ -159,7 +159,6 @@ async function extractFiles(sourceFile: string, targetDir: string) {
 
   Object.keys(files)
     .filter((m) => m.startsWith(`${packageRoot}/${sourceDir}`))
-    .filter((m) => !m.endsWith(".map"))
     .forEach((m) => {
       const content = files[m];
       const fileName = m.replace(`${packageRoot}/${sourceDir}/`, "");
