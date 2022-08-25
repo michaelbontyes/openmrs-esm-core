@@ -1,6 +1,5 @@
 import { renderExtension } from "@openmrs/esm-extensions";
 import React, {
-  PropsWithChildren,
   useCallback,
   useContext,
   useEffect,
@@ -41,7 +40,7 @@ export const Extension: React.FC<ExtensionProps> = ({
 }) => {
   const [domElement, setDomElement] = useState<HTMLDivElement>();
   const { extension } = useContext(ComponentContext);
-  const parcel = useRef<Parcel | null>();
+  const parcel = useRef<Parcel | null>(null);
 
   useEffect(() => {
     if (wrap) {
@@ -66,29 +65,43 @@ export const Extension: React.FC<ExtensionProps> = ({
 
   useEffect(() => {
     if (domElement != null && extension && !parcel.current) {
-      parcel.current = renderExtension(
+      renderExtension(
         domElement,
         extension.extensionSlotName,
         extension.extensionSlotModuleName,
         extension.extensionId,
         undefined,
         state
-      );
+      ).then((newParcel) => {
+        parcel.current = newParcel;
+      });
+
       return () => {
-        parcel.current && parcel.current.unmount();
+        parcel.current && parcel.current.unmount && parcel.current.unmount();
       };
     }
+
+    // we intentionally do not re-run this hook if state gets updated
+    // state updates are handled in the next useEffect hook
+    // eslint-disable-next-line eslintreact-hooks/exhaustive-deps
   }, [
     extension?.extensionSlotName,
     extension?.extensionId,
     extension?.extensionSlotModuleName,
-    state,
     domElement,
   ]);
 
   useEffect(() => {
     if (parcel.current && parcel.current.update) {
-      parcel.current.update({ ...state });
+      if (parcel.current.getStatus() === "MOUNTED") {
+        parcel.current.update({ ...state });
+      } else if (parcel.current.getStatus() === "MOUNTING") {
+        parcel.current.mountPromise.then(() => {
+          parcel.current &&
+            parcel.current.update &&
+            parcel.current.update({ ...state });
+        });
+      }
     }
   }, [parcel.current, state]);
 
